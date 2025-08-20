@@ -1,0 +1,576 @@
+# Jira Intent-to-Tool Configuration
+# Maps user queries/intents to specific Jira MCP server tool plans
+
+# =============================================================================
+# 1. ISSUE CREATION & UPDATES
+# =============================================================================
+
+- intent: create_bug_ticket
+  description: "Create a new bug issue in a project"
+  examples:
+    - "Create a new bug ticket for {project}"
+    - "Raise a bug for {project}"
+    - "Create bug in project {project}"
+    - "Log a bug ticket for {project}"
+    - "Create {project} bug"
+  variables:
+    - name: project
+      required: true
+      type: string
+    - name: summary
+      required: true
+      type: string
+    - name: description
+      required: false
+      type: string
+    - name: priority
+      required: true
+      type: string
+  tool_plan:
+    - tool: create_issue
+      params:
+        projectKey: $project
+        summary: $summary
+        description: $description || "Bug details to be provided"
+        issueType: "Bug"
+        priority: $priority
+
+- intent: create_story_task
+  description: "Create a new story/task with specific title and description"
+  examples:
+    - "Raise a story with summary '{summary}' and description '{description}'"
+    - "Create a task titled '{summary}' with details '{description}'"
+    - "Add story '{summary}' - '{description}'"
+    - "Create new task: {summary}"
+  variables:
+    - name: project
+      required: true
+      type: string
+    - name: summary
+      required: true
+      type: string
+    - name: description
+      required: false
+      type: string
+    - name: issue_type
+      required: false
+      type: string
+      default: "Task"
+  tool_plan:
+    - tool: create_issue
+      params:
+        projectKey: $project
+        summary: $summary
+        description: $description
+        issueType: $issue_type
+
+- intent: add_labels_to_issue
+  description: "Add labels or components to an existing issue"
+  examples:
+    - "Add labels to issue {issue_key}"
+    - "Tag {issue_key} with labels {labels}"
+    - "Add label {label} to {issue_key}"
+    - "Label issue {issue_key} as {labels}"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+    - name: labels
+      required: true
+      type: array
+  tool_plan:
+    - tool: update_issue
+      params:
+        issueKey: $issue_key
+        labels: $labels
+
+- intent: update_assignee
+  description: "Change the assignee of an issue"
+  examples:
+    - "Update the assignee of issue {issue_key}"
+    - "Assign {issue_key} to {assignee}"
+    - "Change assignee of {issue_key} to {assignee}"
+    - "Reassign {issue_key} to {assignee}"
+    - "Assign an issue to someone"
+    - "Assign a ticket to a user"
+    - "Change who is assigned to an issue"
+    - "Reassign a bug to another person"
+    - "Update issue assignment"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+    - name: assignee
+      required: true
+      type: string
+  tool_plan:
+    - tool: assign_issue
+      params:
+        issueKey: $issue_key
+        assignee: $assignee
+
+- intent: change_issue_status
+  description: "Change the status/workflow state of an issue"
+  examples:
+    - "Change the status of {issue_key} to {status}"
+    - "Move {issue_key} to {status}"
+    - "Update {issue_key} status to {status}"
+    - "Transition {issue_key} to {status}"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+    - name: status
+      required: true
+      type: string
+  tool_plan:
+    - tool: get_issue_transitions
+      params:
+        issueKey: $issue_key
+      post_process: "find_transition_id"
+    - tool: transition_issue
+      params:
+        issueKey: $issue_key
+        transitionId: $transition_id
+        comment: "Status changed via assistant"
+
+# =============================================================================
+# 2. ISSUE SEARCH & LOOKUP
+# =============================================================================
+
+- intent: find_my_open_issues
+  description: "Find all open issues assigned to current user"
+  examples:
+    - "Find all open issues assigned to me"
+    - "Show my open issues"
+    - "What issues are assigned to me?"
+    - "List my open tickets"
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "assignee = currentUser() AND status != Done AND status != Closed"
+        maxResults: 50
+
+- intent: find_critical_bugs
+  description: "Show critical bugs in a project"
+  examples:
+    - "Show all critical bugs in {project}"
+    - "List critical bugs for project {project}"
+    - "Find high priority bugs in {project}"
+    - "Critical issues in {project}"
+  variables:
+    - name: project
+      required: true
+      type: string
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "project = {project} AND issuetype = Bug AND priority in (Highest, High, Critical)"
+        maxResults: 50
+
+- intent: find_my_created_issues_this_week
+  description: "List issues created by current user this week"
+  examples:
+    - "List issues created by me this week"
+    - "Show what I created this week"
+    - "Issues I reported this week"
+    - "My created tickets this week"
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "reporter = currentUser() AND created >= startOfWeek()"
+        maxResults: 50
+
+- intent: search_by_label
+  description: "Search for tickets with specific labels"
+  examples:
+    - "Search for tickets with label '{label}'"
+    - "Find issues tagged as '{label}'"
+    - "Show all {label} tickets"
+    - "Issues with {label} label"
+  variables:
+    - name: label
+      required: true
+      type: string
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "labels = '{label}'"
+        maxResults: 50
+
+- intent: find_due_issues
+  description: "Get issues due today or tomorrow"
+  examples:
+    - "Get issues due today"
+    - "Show issues due tomorrow"
+    - "What's due today?"
+    - "Issues due soon"
+  variables:
+    - name: timeframe
+      required: false
+      type: string
+      default: "today"
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "due <= {timeframe}() AND status != Done"
+        maxResults: 50
+
+# =============================================================================
+# 3. REPORTING & METRICS
+# =============================================================================
+
+- intent: show_burndown_chart
+  description: "Show burndown chart for a sprint"
+  examples:
+    - "Show burndown chart for Sprint {sprint_name}"
+    - "Burndown for Sprint {sprint_name}"
+    - "Sprint {sprint_name} burndown"
+  variables:
+    - name: sprint_name
+      required: true
+      type: string
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "sprint = '{sprint_name}'"
+        maxResults: 200
+      post_process: "generate_burndown_chart"
+
+- intent: count_open_issues
+  description: "Count open issues in a project"
+  examples:
+    - "How many open issues are there in {project}?"
+    - "Count of open tickets in {project}"
+    - "Open issue count for {project}"
+  variables:
+    - name: project
+      required: true
+      type: string
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "project = {project} AND status not in (Done, Closed, Resolved)"
+        maxResults: 1000
+      post_process: "count_results"
+
+- intent: average_resolution_time
+  description: "Calculate average resolution time for bugs"
+  examples:
+    - "What's the average resolution time for bugs?"
+    - "Bug resolution time average"
+    - "How long do bugs take to resolve?"
+  variables:
+    - name: project
+      required: false
+      type: string
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "issuetype = Bug AND resolved is not EMPTY {project_filter}"
+        maxResults: 500
+      post_process: "calculate_average_resolution_time"
+
+- intent: issues_closed_last_week
+  description: "Generate report of issues closed last week"
+  examples:
+    - "Generate a report of issues closed last week"
+    - "What was closed last week?"
+    - "Last week's closed issues"
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "resolved >= startOfWeek(-1) AND resolved <= endOfWeek(-1)"
+        maxResults: 200
+      post_process: "generate_closure_report"
+
+- intent: show_velocity
+  description: "Show velocity for the last 3 sprints"
+  examples:
+    - "Show velocity for the last 3 sprints"
+    - "Sprint velocity report"
+    - "Team velocity last 3 sprints"
+  variables:
+    - name: board_id
+      required: false
+      type: string
+  tool_plan:
+    - tool: get_board_sprints
+      params:
+        boardId: $board_id
+        state: "closed"
+      post_process: "calculate_velocity_last_3_sprints"
+
+# =============================================================================
+# 4. SPRINT & AGILE MANAGEMENT
+# =============================================================================
+
+- intent: get_current_sprint
+  description: "Get current active sprint for team/project"
+  examples:
+    - "What is the current sprint for {project}?"
+    - "Current sprint for team {team}"
+    - "Active sprint"
+    - "What sprint are we in?"
+  variables:
+    - name: project
+      required: false
+      type: string
+    - name: board_id
+      required: false
+      type: string
+  tool_plan:
+    - tool: get_board_sprints
+      params:
+        boardId: $board_id
+        state: "active"
+
+- intent: add_issue_to_sprint
+  description: "Add an issue to a specific sprint"
+  examples:
+    - "Add issue {issue_key} to Sprint {sprint_name}"
+    - "Move {issue_key} to Sprint {sprint_name}"
+    - "Put {issue_key} in Sprint {sprint_name}"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+    - name: sprint_name
+      required: true
+      type: string
+  tool_plan:
+    - tool: update_issue
+      params:
+        issueKey: $issue_key
+        sprint: $sprint_name
+      note: "This may require custom field update depending on Jira configuration"
+
+- intent: sprint_end_date
+  description: "Get sprint end date"
+  examples:
+    - "When does the sprint end?"
+    - "Sprint end date"
+    - "When is sprint over?"
+  variables:
+    - name: sprint_name
+      required: false
+      type: string
+  tool_plan:
+    - tool: get_board_sprints
+      params:
+        state: "active"
+      post_process: "extract_end_date"
+
+- intent: list_sprint_stories
+  description: "List all stories in a sprint"
+  examples:
+    - "List all stories in Sprint {sprint_name}"
+    - "Show Sprint {sprint_name} stories"
+    - "What's in Sprint {sprint_name}?"
+  variables:
+    - name: sprint_name
+      required: true
+      type: string
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "sprint = '{sprint_name}' AND issuetype in (Story, Task)"
+        maxResults: 100
+
+- intent: move_to_backlog
+  description: "Move issue back to backlog"
+  examples:
+    - "Move {issue_key} to the backlog"
+    - "Put {issue_key} back in backlog"
+    - "Remove {issue_key} from sprint"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+  tool_plan:
+    - tool: update_issue
+      params:
+        issueKey: $issue_key
+        sprint: null
+      note: "Remove from current sprint"
+
+# =============================================================================
+# 5. NOTIFICATIONS & REMINDERS
+# =============================================================================
+
+- intent: notify_assigned_today
+  description: "Get notifications of issues assigned today"
+  examples:
+    - "Notify me of issues assigned to me today"
+    - "What was assigned to me today?"
+    - "Today's assignments"
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "assignee = currentUser() AND updated >= startOfDay()"
+        maxResults: 50
+      post_process: "format_notification"
+
+- intent: remind_about_issue
+  description: "Set reminder about specific issue"
+  examples:
+    - "Remind me about {issue_key} tomorrow"
+    - "Set reminder for {issue_key}"
+    - "Don't let me forget {issue_key}"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+    - name: reminder_time
+      required: false
+      type: string
+      default: "tomorrow"
+  tool_plan:
+    - tool: get_issue
+      params:
+        issueKey: $issue_key
+      post_process: "schedule_reminder"
+
+- intent: alert_high_priority_bugs
+  description: "Alert when high-priority bugs are created"
+  examples:
+    - "Alert me if a high-priority bug is created"
+    - "Notify on critical bugs"
+    - "High priority bug alerts"
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "issuetype = Bug AND priority in (Highest, High) AND created >= -1d"
+        maxResults: 20
+      post_process: "setup_alert_subscription"
+
+- intent: notify_qa_moves
+  description: "Notify when assigned issues move to QA"
+  examples:
+    - "Tell me when my issues are moved to QA"
+    - "Notify when my tickets reach QA"
+    - "QA status notifications"
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "assignee = currentUser() AND status changed to 'QA' DURING (-1d, now())"
+        maxResults: 50
+      post_process: "format_qa_notification"
+
+- intent: daily_status_assigned
+  description: "Daily status of assigned tickets"
+  examples:
+    - "Send me daily status of my assigned tickets"
+    - "Daily ticket summary"
+    - "My daily issue report"
+  tool_plan:
+    - tool: search_issues
+      params:
+        jql: "assignee = currentUser() AND status != Done"
+        maxResults: 100
+      post_process: "generate_daily_summary"
+
+# =============================================================================
+# 6. COLLABORATION & INTEGRATIONS
+# =============================================================================
+
+- intent: add_comment_to_issue
+  description: "Add a comment to an issue"
+  examples:
+    - "Add a comment to {issue_key}: '{comment}'"
+    - "Comment on {issue_key}: '{comment}'"
+    - "Add note to {issue_key}: '{comment}'"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+    - name: comment
+      required: true
+      type: string
+  tool_plan:
+    - tool: add_comment
+      params:
+        issueKey: $issue_key
+        comment: $comment
+
+- intent: tag_user_in_issue
+  description: "Tag a user in an issue with a message"
+  examples:
+    - "Tag {username} in {issue_key} with message '{message}'"
+    - "Mention {username} on {issue_key}: '{message}'"
+    - "@ {username} on {issue_key}: '{message}'"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+    - name: username
+      required: true
+      type: string
+    - name: message
+      required: true
+      type: string
+  tool_plan:
+    - tool: add_comment
+      params:
+        issueKey: $issue_key
+        comment: "[~{username}] {message}"
+
+- intent: share_issue_external
+  description: "Share issue with external channel"
+  examples:
+    - "Share {issue_key} with {channel}"
+    - "Send {issue_key} to {channel}"
+    - "Post {issue_key} in {channel}"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+    - name: channel
+      required: true
+      type: string
+  tool_plan:
+    - tool: get_issue
+      params:
+        issueKey: $issue_key
+      post_process: "format_and_share_external"
+
+- intent: link_issues
+  description: "Create a link between two issues"
+  examples:
+    - "Link {issue_key1} with {issue_key2}"
+    - "Connect {issue_key1} to {issue_key2}"
+    - "Create relation between {issue_key1} and {issue_key2}"
+  variables:
+    - name: issue_key1
+      required: true
+      type: string
+    - name: issue_key2
+      required: true
+      type: string
+    - name: link_type
+      required: false
+      type: string
+      default: "relates to"
+  tool_plan:
+    - tool: create_issue_link
+      params:
+        inwardIssue: $issue_key1
+        outwardIssue: $issue_key2
+        linkType: $link_type
+      note: "This requires issue linking API which may need additional implementation"
+
+- intent: get_issue_attachments
+  description: "Get attachments from an issue"
+  examples:
+    - "Get attachments from {issue_key}"
+    - "Show files on {issue_key}"
+    - "Download attachments from {issue_key}"
+  variables:
+    - name: issue_key
+      required: true
+      type: string
+  tool_plan:
+    - tool: get_issue
+      params:
+        issueKey: $issue_key
+      post_process: "extract_attachments"

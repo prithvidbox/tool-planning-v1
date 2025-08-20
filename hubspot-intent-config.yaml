@@ -1,0 +1,847 @@
+# HubSpot Intent-to-Tool Configuration
+# Maps user queries/intents to specific HubSpot MCP server tool plans
+
+# =============================================================================
+# 1. CONTACT MANAGEMENT
+# =============================================================================
+
+- intent: create_new_contact
+  description: "Create a new contact in HubSpot"
+  examples:
+    - "Create a new contact for {email}"
+    - "Add contact {firstname} {lastname} with email {email}"
+    - "Create contact: {email}"
+    - "Register new contact {email} from company {company}"
+  variables:
+    - name: email
+      required: true
+      type: string
+    - name: firstname
+      required: false
+      type: string
+    - name: lastname
+      required: false
+      type: string
+    - name: company
+      required: false
+      type: string
+    - name: phone
+      required: false
+      type: string
+    - name: jobtitle
+      required: false
+      type: string
+    - name: lifecyclestage
+      required: false
+      type: string
+      default: "lead"
+  tool_plan:
+    - tool: create_contact
+      params:
+        email: $email
+        firstname: $firstname
+        lastname: $lastname
+        company: $company
+        phone: $phone
+        jobtitle: $jobtitle
+        lifecyclestage: $lifecyclestage
+
+- intent: find_contact
+  description: "Search and retrieve contact information"
+  examples:
+    - "Find contact {email}"
+    - "Get contact details for {email}"
+    - "Show contact {contact_id}"
+    - "Look up contact by email {email}"
+  variables:
+    - name: email
+      required: false
+      type: string
+    - name: contact_id
+      required: false
+      type: string
+  tool_plan:
+    - tool: get_contact
+      params:
+        email: $email
+        contactId: $contact_id
+
+- intent: update_contact_info
+  description: "Update existing contact information"
+  examples:
+    - "Update contact {email} with {field}: {value}"
+    - "Change {email} company to {company}"
+    - "Update {email} job title to {jobtitle}"
+    - "Set {email} lifecycle stage to {stage}"
+  variables:
+    - name: email
+      required: false
+      type: string
+    - name: contact_id
+      required: false
+      type: string
+    - name: firstname
+      required: false
+      type: string
+    - name: lastname
+      required: false
+      type: string
+    - name: company
+      required: false
+      type: string
+    - name: jobtitle
+      required: false
+      type: string
+    - name: phone
+      required: false
+      type: string
+    - name: lifecyclestage
+      required: false
+      type: string
+  tool_plan:
+    - tool: update_contact
+      params:
+        email: $email
+        contactId: $contact_id
+        firstname: $firstname
+        lastname: $lastname
+        company: $company
+        jobtitle: $jobtitle
+        phone: $phone
+        lifecyclestage: $lifecyclestage
+
+- intent: search_contacts
+  description: "Search contacts with filters"
+  examples:
+    - "Search contacts from company {company}"
+    - "Find all {jobtitle} contacts"
+    - "Show contacts with lifecycle stage {stage}"
+    - "Search for contacts matching {query}"
+  variables:
+    - name: query
+      required: false
+      type: string
+    - name: company
+      required: false
+      type: string
+    - name: jobtitle
+      required: false
+      type: string
+    - name: lifecyclestage
+      required: false
+      type: string
+    - name: limit
+      required: false
+      type: number
+      default: 100
+  tool_plan:
+    - tool: search_contacts
+      params:
+        query: $query
+        properties: ["email", "firstname", "lastname", "company", "jobtitle", "lifecyclestage"]
+        limit: $limit
+
+- intent: delete_contact
+  description: "Delete a contact from HubSpot"
+  examples:
+    - "Delete contact {contact_id}"
+    - "Remove contact {email}"
+    - "Delete contact with ID {contact_id}"
+  variables:
+    - name: contact_id
+      required: true
+      type: string
+  tool_plan:
+    - tool: delete_contact
+      params:
+        contactId: $contact_id
+
+# =============================================================================
+# 2. COMPANY MANAGEMENT
+# =============================================================================
+
+- intent: create_new_company
+  description: "Create a new company in HubSpot"
+  examples:
+    - "Create company {company_name}"
+    - "Add new company: {company_name}"
+    - "Register company {company_name} with domain {domain}"
+    - "Create company {company_name} in {city}"
+  variables:
+    - name: name
+      required: true
+      type: string
+    - name: domain
+      required: false
+      type: string
+    - name: city
+      required: false
+      type: string
+    - name: state
+      required: false
+      type: string
+    - name: country
+      required: false
+      type: string
+    - name: industry
+      required: false
+      type: string
+    - name: phone
+      required: false
+      type: string
+    - name: numberofemployees
+      required: false
+      type: string
+  tool_plan:
+    - tool: create_company
+      params:
+        name: $name
+        domain: $domain
+        city: $city
+        state: $state
+        country: $country
+        industry: $industry
+        phone: $phone
+        numberofemployees: $numberofemployees
+
+- intent: find_company
+  description: "Find and retrieve company information"
+  examples:
+    - "Find company {company_id}"
+    - "Get company details for {company_id}"
+    - "Show company information {company_id}"
+  variables:
+    - name: company_id
+      required: true
+      type: string
+  tool_plan:
+    - tool: get_company
+      params:
+        companyId: $company_id
+
+- intent: update_company_info
+  description: "Update company information"
+  examples:
+    - "Update company {company_id} industry to {industry}"
+    - "Change company {company_id} location to {city}"
+    - "Update {company_id} employee count to {employees}"
+  variables:
+    - name: company_id
+      required: true
+      type: string
+    - name: name
+      required: false
+      type: string
+    - name: domain
+      required: false
+      type: string
+    - name: city
+      required: false
+      type: string
+    - name: state
+      required: false
+      type: string
+    - name: country
+      required: false
+      type: string
+    - name: industry
+      required: false
+      type: string
+    - name: numberofemployees
+      required: false
+      type: string
+  tool_plan:
+    - tool: update_company
+      params:
+        companyId: $company_id
+        name: $name
+        domain: $domain
+        city: $city
+        state: $state
+        country: $country
+        industry: $industry
+        numberofemployees: $numberofemployees
+
+- intent: search_companies
+  description: "Search companies with criteria"
+  examples:
+    - "Search companies in {industry}"
+    - "Find companies in {city}"
+    - "Show all companies matching {query}"
+    - "List companies with {employees}+ employees"
+  variables:
+    - name: query
+      required: false
+      type: string
+    - name: industry
+      required: false
+      type: string
+    - name: city
+      required: false
+      type: string
+    - name: limit
+      required: false
+      type: number
+      default: 100
+  tool_plan:
+    - tool: search_companies
+      params:
+        query: $query
+        properties: ["name", "domain", "city", "state", "industry", "numberofemployees"]
+        limit: $limit
+
+# =============================================================================
+# 3. DEAL MANAGEMENT
+# =============================================================================
+
+- intent: create_new_deal
+  description: "Create a new deal in HubSpot"
+  examples:
+    - "Create deal {dealname} worth ${amount}"
+    - "Add new deal: {dealname}"
+    - "Create deal {dealname} closing on {closedate}"
+    - "New deal: {dealname} for ${amount}"
+  variables:
+    - name: dealname
+      required: true
+      type: string
+    - name: amount
+      required: false
+      type: string
+    - name: closedate
+      required: false
+      type: string
+    - name: dealstage
+      required: false
+      type: string
+    - name: dealtype
+      required: false
+      type: string
+      default: "newbusiness"
+    - name: pipeline
+      required: false
+      type: string
+  tool_plan:
+    - tool: create_deal
+      params:
+        dealname: $dealname
+        amount: $amount
+        closedate: $closedate
+        dealstage: $dealstage
+        dealtype: $dealtype
+        pipeline: $pipeline
+
+- intent: find_deal
+  description: "Find and retrieve deal information"
+  examples:
+    - "Find deal {deal_id}"
+    - "Get deal details for {deal_id}"
+    - "Show deal {deal_id}"
+  variables:
+    - name: deal_id
+      required: true
+      type: string
+  tool_plan:
+    - tool: get_deal
+      params:
+        dealId: $deal_id
+
+- intent: update_deal_info
+  description: "Update deal information"
+  examples:
+    - "Update deal {deal_id} amount to ${amount}"
+    - "Change deal {deal_id} stage to {stage}"
+    - "Move deal {deal_id} to {stage}"
+    - "Update {deal_id} close date to {date}"
+  variables:
+    - name: deal_id
+      required: true
+      type: string
+    - name: dealname
+      required: false
+      type: string
+    - name: amount
+      required: false
+      type: string
+    - name: closedate
+      required: false
+      type: string
+    - name: dealstage
+      required: false
+      type: string
+    - name: dealtype
+      required: false
+      type: string
+  tool_plan:
+    - tool: update_deal
+      params:
+        dealId: $deal_id
+        dealname: $dealname
+        amount: $amount
+        closedate: $closedate
+        dealstage: $dealstage
+        dealtype: $dealtype
+
+- intent: search_deals
+  description: "Search deals with filters"
+  examples:
+    - "Search deals in stage {stage}"
+    - "Find deals worth more than ${amount}"
+    - "Show all deals closing this month"
+    - "Search deals matching {query}"
+  variables:
+    - name: query
+      required: false
+      type: string
+    - name: stage
+      required: false
+      type: string
+    - name: amount_min
+      required: false
+      type: number
+    - name: limit
+      required: false
+      type: number
+      default: 100
+  tool_plan:
+    - tool: search_deals
+      params:
+        query: $query
+        properties: ["dealname", "dealstage", "amount", "closedate", "dealtype"]
+        limit: $limit
+
+# =============================================================================
+# 4. TICKET MANAGEMENT
+# =============================================================================
+
+- intent: create_support_ticket
+  description: "Create a new support ticket"
+  examples:
+    - "Create ticket: {subject}"
+    - "New support ticket for {subject}"
+    - "Log ticket: {subject} - {content}"
+    - "Create high priority ticket: {subject}"
+  variables:
+    - name: subject
+      required: true
+      type: string
+    - name: content
+      required: false
+      type: string
+    - name: priority
+      required: false
+      type: string
+      default: "MEDIUM"
+    - name: pipeline
+      required: false
+      type: string
+    - name: stage
+      required: false
+      type: string
+  tool_plan:
+    - tool: create_ticket
+      params:
+        subject: $subject
+        content: $content
+        hs_ticket_priority: $priority
+        hs_pipeline: $pipeline
+        hs_pipeline_stage: $stage
+
+- intent: find_ticket
+  description: "Find and retrieve ticket information"
+  examples:
+    - "Find ticket {ticket_id}"
+    - "Get ticket details for {ticket_id}"
+    - "Show ticket {ticket_id}"
+  variables:
+    - name: ticket_id
+      required: true
+      type: string
+  tool_plan:
+    - tool: get_ticket
+      params:
+        ticketId: $ticket_id
+
+- intent: update_ticket_info
+  description: "Update ticket information"
+  examples:
+    - "Update ticket {ticket_id} priority to {priority}"
+    - "Change ticket {ticket_id} status to {status}"
+    - "Update ticket {ticket_id} content: {content}"
+  variables:
+    - name: ticket_id
+      required: true
+      type: string
+    - name: subject
+      required: false
+      type: string
+    - name: content
+      required: false
+      type: string
+    - name: priority
+      required: false
+      type: string
+    - name: stage
+      required: false
+      type: string
+  tool_plan:
+    - tool: update_ticket
+      params:
+        ticketId: $ticket_id
+        subject: $subject
+        content: $content
+        hs_ticket_priority: $priority
+        hs_pipeline_stage: $stage
+
+- intent: search_tickets
+  description: "Search tickets with filters"
+  examples:
+    - "Search tickets with priority {priority}"
+    - "Find tickets in stage {stage}"
+    - "Show all open tickets"
+    - "Search tickets matching {query}"
+  variables:
+    - name: query
+      required: false
+      type: string
+    - name: priority
+      required: false
+      type: string
+    - name: stage
+      required: false
+      type: string
+    - name: limit
+      required: false
+      type: number
+      default: 100
+  tool_plan:
+    - tool: search_tickets
+      params:
+        query: $query
+        properties: ["subject", "content", "hs_ticket_priority", "hs_pipeline_stage"]
+        limit: $limit
+
+# =============================================================================
+# 5. ENGAGEMENT & ACTIVITIES
+# =============================================================================
+
+- intent: create_note
+  description: "Create a note associated with records"
+  examples:
+    - "Create note: {content}"
+    - "Add note to record: {content}"
+    - "Log note: {content}"
+    - "Create note for contact {contact_id}: {content}"
+  variables:
+    - name: body
+      required: true
+      type: string
+    - name: contact_id
+      required: false
+      type: string
+    - name: company_id
+      required: false
+      type: string
+    - name: deal_id
+      required: false
+      type: string
+  tool_plan:
+    - tool: create_note
+      params:
+        body: $body
+        associations: $associations
+      post_process: "build_associations"
+
+- intent: create_task
+  description: "Create a task"
+  examples:
+    - "Create task: {subject}"
+    - "New task: {subject}"
+    - "Add task {subject} due {due_date}"
+    - "Create high priority task: {subject}"
+  variables:
+    - name: subject
+      required: true
+      type: string
+    - name: body
+      required: false
+      type: string
+    - name: due_date
+      required: false
+      type: string
+    - name: priority
+      required: false
+      type: string
+      default: "MEDIUM"
+    - name: status
+      required: false
+      type: string
+      default: "NOT_STARTED"
+  tool_plan:
+    - tool: create_task
+      params:
+        subject: $subject
+        body: $body
+        due_date: $due_date
+        priority: $priority
+        status: $status
+
+- intent: create_meeting
+  description: "Create a meeting"
+  examples:
+    - "Schedule meeting: {title}"
+    - "Create meeting {title} at {start_time}"
+    - "New meeting: {title}"
+    - "Schedule {title} from {start_time} to {end_time}"
+  variables:
+    - name: title
+      required: true
+      type: string
+    - name: body
+      required: false
+      type: string
+    - name: start_time
+      required: false
+      type: string
+    - name: end_time
+      required: false
+      type: string
+  tool_plan:
+    - tool: create_meeting
+      params:
+        title: $title
+        body: $body
+        start_time: $start_time
+        end_time: $end_time
+
+# =============================================================================
+# 6. ASSOCIATIONS & RELATIONSHIPS
+# =============================================================================
+
+- intent: link_records
+  description: "Create association between records"
+  examples:
+    - "Link contact {contact_id} to company {company_id}"
+    - "Associate deal {deal_id} with contact {contact_id}"
+    - "Connect {from_id} to {to_id}"
+  variables:
+    - name: from_object_type
+      required: true
+      type: string
+    - name: from_object_id
+      required: true
+      type: string
+    - name: to_object_type
+      required: true
+      type: string
+    - name: to_object_id
+      required: true
+      type: string
+    - name: association_type
+      required: false
+      type: string
+      default: "primary"
+  tool_plan:
+    - tool: create_association
+      params:
+        fromObjectType: $from_object_type
+        fromObjectId: $from_object_id
+        toObjectType: $to_object_type
+        toObjectId: $to_object_id
+        associationType: $association_type
+
+- intent: get_record_associations
+  description: "Get associations for a record"
+  examples:
+    - "Show associations for contact {contact_id}"
+    - "Get related records for company {company_id}"
+    - "Find associations for deal {deal_id}"
+  variables:
+    - name: object_type
+      required: true
+      type: string
+    - name: object_id
+      required: true
+      type: string
+    - name: to_object_type
+      required: true
+      type: string
+  tool_plan:
+    - tool: get_associations
+      params:
+        objectType: $object_type
+        objectId: $object_id
+        toObjectType: $to_object_type
+
+# =============================================================================
+# 7. REPORTING & ANALYTICS
+# =============================================================================
+
+- intent: deals_by_stage
+  description: "Report deals by stage"
+  examples:
+    - "Show deals by stage"
+    - "Deal pipeline report"
+    - "How many deals in each stage?"
+  tool_plan:
+    - tool: search_deals
+      params:
+        properties: ["dealname", "dealstage", "amount"]
+        limit: 1000
+      post_process: "group_by_stage"
+
+- intent: contact_lifecycle_report
+  description: "Report contacts by lifecycle stage"
+  examples:
+    - "Contact lifecycle report"
+    - "Show contacts by stage"
+    - "How many leads vs customers?"
+  tool_plan:
+    - tool: search_contacts
+      params:
+        properties: ["email", "firstname", "lastname", "lifecyclestage"]
+        limit: 1000
+      post_process: "group_by_lifecycle_stage"
+
+- intent: revenue_forecast
+  description: "Calculate revenue forecast from deals"
+  examples:
+    - "Revenue forecast"
+    - "Expected revenue this quarter"
+    - "Deal value pipeline"
+  tool_plan:
+    - tool: search_deals
+      params:
+        properties: ["dealname", "amount", "closedate", "dealstage"]
+        limit: 1000
+      post_process: "calculate_revenue_forecast"
+
+- intent: activity_summary
+  description: "Summary of recent activities"
+  examples:
+    - "Recent activity summary"
+    - "What happened this week?"
+    - "Activity report"
+  tool_plan:
+    - tool: search_contacts
+      params:
+        properties: ["email", "firstname", "lastname", "lastmodifieddate"]
+        limit: 200
+      post_process: "generate_activity_summary"
+
+# =============================================================================
+# 8. COMMUNICATIONS & INTEGRATIONS
+# =============================================================================
+
+- intent: send_email
+  description: "Send an email"
+  examples:
+    - "Send email to {recipient}: {subject}"
+    - "Email {recipient} about {subject}"
+    - "Send message to {recipient}: {subject}"
+  variables:
+    - name: to
+      required: true
+      type: string
+    - name: from
+      required: true
+      type: string
+    - name: subject
+      required: true
+      type: string
+    - name: html_body
+      required: false
+      type: string
+    - name: text_body
+      required: false
+      type: string
+  tool_plan:
+    - tool: send_email
+      params:
+        to: $to
+        from: $from
+        subject: $subject
+        htmlBody: $html_body
+        textBody: $text_body
+
+# =============================================================================
+# 9. UTILITY & CONFIGURATION
+# =============================================================================
+
+- intent: get_object_properties
+  description: "Get properties for an object type"
+  examples:
+    - "Show contact properties"
+    - "Get deal fields"
+    - "List company properties"
+    - "What fields are available for {object_type}?"
+  variables:
+    - name: object_type
+      required: true
+      type: string
+  tool_plan:
+    - tool: get_properties
+      params:
+        objectType: $object_type
+
+- intent: list_owners
+  description: "List all HubSpot owners"
+  examples:
+    - "List all owners"
+    - "Show team members"
+    - "Get owner list"
+    - "Who are the owners?"
+  tool_plan:
+    - tool: get_owners
+      params:
+        limit: 100
+
+- intent: get_pipelines
+  description: "Get pipeline information"
+  examples:
+    - "Show deal pipelines"
+    - "Get ticket pipelines"
+    - "List all pipelines"
+  tool_plan:
+    - tool: get_pipelines
+      post_process: "format_pipelines"
+
+# =============================================================================
+# 10. BULK OPERATIONS & IMPORTS
+# =============================================================================
+
+- intent: bulk_contact_import
+  description: "Import multiple contacts"
+  examples:
+    - "Import contacts from {source}"
+    - "Bulk create contacts"
+    - "Mass import contacts"
+  variables:
+    - name: contacts_data
+      required: true
+      type: array
+  tool_plan:
+    - tool: bulk_create_contacts
+      params:
+        contacts: $contacts_data
+      post_process: "bulk_import_contacts"
+
+- intent: bulk_update_lifecycle
+  description: "Update lifecycle stages in bulk"
+  examples:
+    - "Update all leads to MQL"
+    - "Bulk update lifecycle stages"
+    - "Mass lifecycle update"
+  variables:
+    - name: criteria
+      required: true
+      type: object
+    - name: new_stage
+      required: true
+      type: string
+  tool_plan:
+    - tool: search_contacts
+      params:
+        query: $criteria
+        limit: 1000
+      post_process: "bulk_update_lifecycle_stage"
