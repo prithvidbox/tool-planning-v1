@@ -68,15 +68,6 @@ for this issue and then change it to your desired status
 Multi-Tool Plan:
 get_issue_transitions → transition_issue
 ```
-
-## 🛠️ MCP Integration
-
-**MCP Servers (Production-Ready):**
-- Jira MCP Server: `/Users/prithvi/Documents/Cline/MCP/jira-server/`
-- HubSpot MCP Server: `/Users/prithvi/Documents/Cline/MCP/hubspot-server/`
-
-Both configured in Cline + Claude Desktop with real API credentials.
-
 ---
 
 **🎯 Complete production system that eliminates LLM planning while providing intelligent semantic matching and context-aware variable collection.**
