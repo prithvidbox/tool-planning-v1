@@ -1,13 +1,19 @@
 """
-Runtime intent matching and tool execution orchestration.
+Runtime intent matching and tool execution orchestration using OpenAI.
 """
 
 import re
+import os
 from typing import Dict, List, Any, Optional, Tuple
 from loguru import logger
+from dotenv import load_dotenv
 from .config_parser import ConfigParser, IntentConfig
-from .embedding_engine import EmbeddingEngine
 from .dependency_planner import DependencyPlanner
+from .openai_embedding_engine import OpenAIEmbeddingEngine
+from .openai_variable_extractor import OpenAIVariableExtractor
+
+# Load environment variables first
+load_dotenv()
 
 
 class ToolExecutor:
@@ -67,28 +73,37 @@ class ToolExecutor:
 
 
 class IntentMatcher:
-    """Main class for intent matching and tool orchestration."""
+    """Main class for intent matching and tool orchestration using OpenAI."""
     
     def __init__(self, 
                  jira_config_path: str,
                  hubspot_config_path: str,
                  confidence_threshold: float = 0.8,
-                 model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+                 model_name: str = "text-embedding-3-small"):
         """
-        Initialize the intent matcher.
+        Initialize the intent matcher with OpenAI.
         
         Args:
             jira_config_path: Path to Jira intent configuration YAML
             hubspot_config_path: Path to HubSpot intent configuration YAML  
             confidence_threshold: Minimum similarity score for intent matching
-            model_name: Sentence transformer model name
+            model_name: OpenAI embedding model name
         """
+        # Ensure OpenAI API key is available
+        if not os.getenv('OPENAI_API_KEY'):
+            raise ValueError("OPENAI_API_KEY is required for this system")
+            
         self.confidence_threshold = confidence_threshold
         
-        # Initialize components
+        # Initialize components with OpenAI
         self.config_parser = ConfigParser()
-        self.embedding_engine = EmbeddingEngine(model_name)
-        self.variable_extractor = None  # Using lightweight_nlp for variable extraction
+        
+        # Use OpenAI embedding model from env or default
+        openai_model = os.getenv('OPENAI_EMBEDDING_MODEL', model_name)
+        self.embedding_engine = OpenAIEmbeddingEngine(openai_model)
+        
+        # Initialize OpenAI variable extractor
+        self.variable_extractor = OpenAIVariableExtractor()
         self.tool_executor = ToolExecutor()
         
         # Load configurations
@@ -96,33 +111,25 @@ class IntentMatcher:
         self.config_parser.load_all_configs(jira_config_path, hubspot_config_path)
         
         # Build embedding index
-        logger.info("Building embedding index")
+        logger.info("Building OpenAI embedding index")
         self.embedding_engine.build_index(self.config_parser)
         
-        logger.info(f"Intent matcher initialized with {len(self.config_parser)} intents")
+        logger.info(f"OpenAI-powered intent matcher initialized with {len(self.config_parser)} intents")
         
     def process_query(self, query: str) -> Dict[str, Any]:
         """
-        Process a user query and return tool execution plan or error.
+        Process a user query using OpenAI and return tool execution plan or error.
         
         Args:
             query: User query string
             
         Returns:
-            Dictionary containing:
-            - success: bool
-            - intent: matched intent name (if successful)
-            - platform: platform (jira/hubspot) (if successful)
-            - confidence: similarity score (if successful)
-            - variables: extracted variables (if successful)
-            - tool_plan: executable tool plan (if successful)
-            - error: error message (if unsuccessful)
-            - suggestions: suggested intents (if unsuccessful)
+            Dictionary containing execution results or error details
         """
         try:
-            logger.info(f"Processing query: '{query}'")
+            logger.info(f"Processing query with OpenAI: '{query}'")
             
-            # Find best matching intent
+            # Find best matching intent using OpenAI embeddings
             match_result = self.embedding_engine.find_best_intent(query, self.confidence_threshold)
             
             if match_result is None:
@@ -137,17 +144,18 @@ class IntentMatcher:
                 
             intent_config, confidence = match_result
             
-            # Extract variables from the original query first
-            from .lightweight_nlp import LightweightNLP
-            nlp_extractor = LightweightNLP()
-            
+            # Extract variables using OpenAI
             required_vars = [var['name'] for var in intent_config.variables if var.get('required', False)]
             optional_vars = [var['name'] for var in intent_config.variables if not var.get('required', False)]
             all_needed_vars = required_vars + optional_vars
             
-            # Try to extract variables from original query
-            extracted_vars = nlp_extractor.extract_variables_from_sentence(query, all_needed_vars)
-            logger.info(f"Extracted from original query: {extracted_vars}")
+            # Use OpenAI for variable extraction
+            extracted_vars = self.variable_extractor.extract_variables_from_query(
+                query, all_needed_vars, intent_config.description, intent_config.examples
+            )
+            
+            confidence_scores = self.variable_extractor.get_extraction_confidence(query, extracted_vars)
+            logger.info(f"OpenAI extracted: {extracted_vars} | Scores: {confidence_scores}")
             
             # Check which required variables are still missing
             missing_required = []
@@ -195,14 +203,14 @@ class IntentMatcher:
                 }
             
         except Exception as e:
-            logger.error(f"Error processing query: {e}")
+            logger.error(f"Error processing query with OpenAI: {e}")
             return {
                 'success': False,
-                'error': f'Internal error: {str(e)}'
+                'error': f'OpenAI processing error: {str(e)}'
             }
             
     def _get_suggestions(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
-        """Get suggested intents for failed matches."""
+        """Get suggested intents using OpenAI embeddings."""
         try:
             similar_intents = self.embedding_engine.search_similar_intents(query, top_k)
             suggestions = []
@@ -218,11 +226,11 @@ class IntentMatcher:
                 
             return suggestions
         except Exception as e:
-            logger.error(f"Error getting suggestions: {e}")
+            logger.error(f"Error getting OpenAI suggestions: {e}")
             return []
             
     def save_index(self, index_dir: str = "./models") -> None:
-        """Save the embedding index to disk."""
+        """Save the OpenAI embedding index to disk."""
         from pathlib import Path
         index_dir = Path(index_dir)
         index_dir.mkdir(exist_ok=True)
@@ -233,7 +241,7 @@ class IntentMatcher:
         self.embedding_engine.save_index(index_path, metadata_path)
         
     def load_index(self, index_dir: str = "./models") -> None:
-        """Load the embedding index from disk."""
+        """Load the OpenAI embedding index from disk."""
         from pathlib import Path
         index_dir = Path(index_dir)
         
@@ -252,6 +260,7 @@ class IntentMatcher:
             'embedding_stats': self.embedding_engine.get_index_stats(),
             'matching_config': {
                 'confidence_threshold': self.confidence_threshold,
-                'semantic_extraction': True
+                'engine': 'openai',
+                'variable_extraction': 'openai_gpt'
             }
         }

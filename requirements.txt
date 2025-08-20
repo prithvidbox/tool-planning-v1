@@ -1,11 +1,12 @@
-# RAG-based NLU-to-Tool Matching System
-# Open-source dependencies
+# OpenAI-powered Intent Matching System
+# Lightweight dependencies using OpenAI for embeddings and variable extraction
 
-# Core ML/NLP
-sentence-transformers>=2.7.0
+# OpenAI integration
+openai>=1.0.0
+
+# Vector storage and indexing
 faiss-cpu>=1.7.4
 numpy>=1.24.3
-scikit-learn>=1.3.0
 
 # Data processing
 pyyaml>=6.0.1

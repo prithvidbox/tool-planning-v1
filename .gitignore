@@ -115,3 +115,10 @@ venv.bak/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Test results and benchmarks
+test_results_*.json
+benchmark_*.json
+
+# OpenAI API usage logs
+openai_usage_*.log

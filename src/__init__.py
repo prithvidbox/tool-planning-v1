@@ -1,28 +1,29 @@
 """
-RAG-based NLU-to-Tool Matching System
+OpenAI-powered Intent Matching System
 
-Open-source intent matching system for MCP server tool orchestration.
+Lightweight intent matching system for MCP server tool orchestration using OpenAI.
 """
 
 from .config_parser import ConfigParser, IntentConfig
-from .embedding_engine import EmbeddingEngine, RRFEngine
+from .openai_embedding_engine import OpenAIEmbeddingEngine, RRFEngine
 from .intent_matcher import IntentMatcher, ToolExecutor
 from .dependency_planner import DependencyPlanner, ToolDependency, SmartToolPlanner
-from .lightweight_nlp import LightweightNLP, SmartVariableCollector
+from .lightweight_nlp import SmartVariableCollector
+from .openai_variable_extractor import OpenAIVariableExtractor
 
-__version__ = "1.0.0"
-__author__ = "MCP Configuration Generator"
+__version__ = "2.0.0"
+__author__ = "OpenAI Intent Matcher"
 
 __all__ = [
     "ConfigParser",
     "IntentConfig", 
-    "EmbeddingEngine",
+    "OpenAIEmbeddingEngine",
     "RRFEngine",
     "IntentMatcher",
     "ToolExecutor",
     "DependencyPlanner",
     "ToolDependency",
     "SmartToolPlanner",
-    "LightweightNLP",
-    "SmartVariableCollector"
+    "SmartVariableCollector",
+    "OpenAIVariableExtractor"
 ]

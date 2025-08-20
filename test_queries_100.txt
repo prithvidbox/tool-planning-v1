@@ -1,0 +1,128 @@
+# 100 Test Queries for OpenAI Intent Matching System
+# Format: Query | Expected Intent | Expected Platform | Variables Expected
+
+# JIRA QUERIES - Issue Management
+1. Create a bug in PROJ with summary "Login fails" | create_bug_ticket | jira | project:PROJ, summary:Login fails
+2. Change status of PROJ-123 to Done | change_issue_status | jira | issue_key:PROJ-123, status:Done
+3. Assign TASK-456 to john.doe | update_assignee | jira | issue_key:TASK-456, assignee:john.doe
+4. Find my open issues | find_my_open_issues | jira | (none)
+5. Show critical bugs in ABC project | find_critical_bugs | jira | project:ABC
+6. Add comment to PROJ-789: "Fixed the issue" | add_comment_to_issue | jira | issue_key:PROJ-789, comment:Fixed the issue
+7. Create high priority task "Update documentation" | create_story_task | jira | summary:Update documentation, priority:High
+8. Move PROJ-456 to In Progress | change_issue_status | jira | issue_key:PROJ-456, status:In Progress
+9. What issues were assigned to me today? | notify_assigned_today | jira | (none)
+10. Count open issues in MYPROJ | count_open_issues | jira | project:MYPROJ
+
+# JIRA QUERIES - Sprint Management
+11. Add PROJ-123 to Sprint 5 | add_issue_to_sprint | jira | issue_key:PROJ-123, sprint_name:Sprint 5
+12. Show current sprint | get_current_sprint | jira | (none)
+13. List stories in Sprint Alpha | list_sprint_stories | jira | sprint_name:Sprint Alpha
+14. Move TASK-789 to backlog | move_to_backlog | jira | issue_key:TASK-789
+15. Show team velocity last 3 sprints | show_velocity | jira | (none)
+16. When does sprint end? | sprint_end_date | jira | (none)
+17. Show burndown for Sprint 2 | show_burndown_chart | jira | sprint_name:Sprint 2
+18. Daily status of my tickets | daily_status_assigned | jira | (none)
+19. Issues I created this week | find_my_created_issues_this_week | jira | (none)
+20. Search tickets with label "frontend" | search_by_label | jira | label:frontend
+
+# JIRA QUERIES - Reporting
+21. Average resolution time for bugs | average_resolution_time | jira | (none)
+22. Issues closed last week | issues_closed_last_week | jira | (none)
+23. High priority bug alerts | alert_high_priority_bugs | jira | (none)
+24. Notify when my issues move to QA | notify_qa_moves | jira | (none)
+25. What's due today? | find_due_issues | jira | timeframe:today
+
+# JIRA QUERIES - Collaboration
+26. Tag @jane in PROJ-456: "Need your review" | tag_user_in_issue | jira | issue_key:PROJ-456, username:jane, message:Need your review
+27. Share PROJ-123 with #dev-team | share_issue_external | jira | issue_key:PROJ-123, channel:#dev-team
+28. Link PROJ-123 with PROJ-124 | link_issues | jira | issue_key1:PROJ-123, issue_key2:PROJ-124
+29. Get attachments from TASK-555 | get_issue_attachments | jira | issue_key:TASK-555
+30. Remind me about PROJ-888 tomorrow | remind_about_issue | jira | issue_key:PROJ-888, reminder_time:tomorrow
+
+# HUBSPOT QUERIES - Contact Management  
+31. Create contact jane@company.com | create_new_contact | hubspot | email:jane@company.com
+32. Create contact John Smith at Acme Corp | create_new_contact | hubspot | firstname:John, lastname:Smith, company:Acme Corp
+33. Find contact john@example.com | find_contact | hubspot | email:john@example.com
+34. Update contact jane@test.com job title to "Manager" | update_contact_info | hubspot | email:jane@test.com, jobtitle:Manager
+35. Search contacts from Microsoft | search_contacts | hubspot | company:Microsoft
+36. Delete contact with ID 12345 | delete_contact | hubspot | contact_id:12345
+37. Create contact Mary Johnson with phone 555-1234 | create_new_contact | hubspot | firstname:Mary, lastname:Johnson, phone:555-1234
+38. Find all marketing contacts | search_contacts | hubspot | jobtitle:marketing
+39. Update contact lifecycle to customer | update_contact_info | hubspot | lifecyclestage:customer
+40. Search contacts with CEO title | search_contacts | hubspot | jobtitle:CEO
+
+# HUBSPOT QUERIES - Company Management
+41. Create company "TechStart Inc" | create_new_company | hubspot | name:TechStart Inc
+42. Find company 67890 | find_company | hubspot | company_id:67890
+43. Create company Innovate LLC in San Francisco | create_new_company | hubspot | name:Innovate LLC, city:San Francisco
+44. Update company 11111 industry to "Software" | update_company_info | hubspot | company_id:11111, industry:Software
+45. Search companies in technology industry | search_companies | hubspot | industry:technology
+46. Create company with domain example.com | create_new_company | hubspot | domain:example.com
+47. Find companies in New York | search_companies | hubspot | city:New York
+48. Update company location to Boston | update_company_info | hubspot | city:Boston
+49. Search companies with 50+ employees | search_companies | hubspot | (none)
+50. Create startup company "AI Solutions" | create_new_company | hubspot | name:AI Solutions
+
+# HUBSPOT QUERIES - Deal Management
+51. Create deal "Enterprise License" worth $50000 | create_new_deal | hubspot | dealname:Enterprise License, amount:50000
+52. Find deal 98765 | find_deal | hubspot | deal_id:98765
+53. Update deal 12345 amount to $75000 | update_deal_info | hubspot | deal_id:12345, amount:75000
+54. Create deal "Q1 Contract" closing March 31 | create_new_deal | hubspot | dealname:Q1 Contract, closedate:March 31
+55. Search deals in negotiation stage | search_deals | hubspot | stage:negotiation
+56. Move deal 55555 to closed won | update_deal_info | hubspot | deal_id:55555, dealstage:closed won
+57. Create $25000 deal "Consulting Project" | create_new_deal | hubspot | dealname:Consulting Project, amount:25000
+58. Find deals worth more than $100000 | search_deals | hubspot | amount_min:100000
+59. Update deal close date to next Friday | update_deal_info | hubspot | closedate:next Friday
+60. Search all deals closing this month | search_deals | hubspot | (none)
+
+# HUBSPOT QUERIES - Ticket Management
+61. Create ticket "Website is down" | create_support_ticket | hubspot | subject:Website is down
+62. Find ticket 77777 | find_ticket | hubspot | ticket_id:77777
+63. Create high priority ticket "Database error" | create_support_ticket | hubspot | subject:Database error, priority:HIGH
+64. Update ticket 88888 status to resolved | update_ticket_info | hubspot | ticket_id:88888, stage:resolved
+65. Search tickets with high priority | search_tickets | hubspot | priority:high
+66. Create ticket about login problems | create_support_ticket | hubspot | subject:login problems
+67. Update ticket content: "User reported fix works" | update_ticket_info | hubspot | content:User reported fix works
+68. Find all open tickets | search_tickets | hubspot | (none)
+69. Create urgent ticket "Server outage" | create_support_ticket | hubspot | subject:Server outage, priority:URGENT
+70. Search tickets in QA stage | search_tickets | hubspot | stage:QA
+
+# HUBSPOT QUERIES - Activities & Engagement
+71. Create note: "Called customer about renewal" | create_note | hubspot | body:Called customer about renewal
+72. Create task "Follow up with lead" | create_task | hubspot | subject:Follow up with lead
+73. Schedule meeting "Product Demo" tomorrow 2pm | create_meeting | hubspot | title:Product Demo, start_time:tomorrow 2pm
+74. Create high priority task due Friday | create_task | hubspot | priority:HIGH, due_date:Friday
+75. Log note for contact 99999: "Interested in upgrade" | create_note | hubspot | contact_id:99999, body:Interested in upgrade
+76. Create task "Review contract" with medium priority | create_task | hubspot | subject:Review contract, priority:MEDIUM
+77. Schedule meeting from 3pm to 4pm | create_meeting | hubspot | start_time:3pm, end_time:4pm
+78. Create note about competitor analysis | create_note | hubspot | body:competitor analysis
+79. Task: "Prepare proposal" due Monday | create_task | hubspot | subject:Prepare proposal, due_date:Monday
+80. Meeting "Team Sync" at 10am | create_meeting | hubspot | title:Team Sync, start_time:10am
+
+# HUBSPOT QUERIES - Associations & Relationships
+81. Link contact 12345 to company 67890 | link_records | hubspot | from_object_id:12345, to_object_id:67890
+82. Associate deal 11111 with contact 22222 | link_records | hubspot | from_object_id:11111, to_object_id:22222
+83. Show associations for contact 33333 | get_record_associations | hubspot | object_id:33333
+84. Connect deal to company | link_records | hubspot | (none)
+85. Get related records for company 44444 | get_record_associations | hubspot | object_id:44444
+
+# HUBSPOT QUERIES - Reporting & Analytics  
+86. Deal pipeline report | deals_by_stage | hubspot | (none)
+87. Contact lifecycle report | contact_lifecycle_report | hubspot | (none)
+88. Revenue forecast | revenue_forecast | hubspot | (none)
+89. Recent activity summary | activity_summary | hubspot | (none)
+90. Show deals by stage | deals_by_stage | hubspot | (none)
+
+# HUBSPOT QUERIES - Utilities
+91. Show contact properties | get_object_properties | hubspot | object_type:contacts
+92. List all owners | list_owners | hubspot | (none)
+93. Get deal pipelines | get_pipelines | hubspot | (none)
+94. Show company fields | get_object_properties | hubspot | object_type:companies
+95. List team members | list_owners | hubspot | (none)
+
+# HUBSPOT QUERIES - Email & Communications
+96. Send email to john@test.com about "Project Update" | send_email | hubspot | to:john@test.com, subject:Project Update
+97. Email jane@company.com from support@mycompany.com | send_email | hubspot | to:jane@company.com, from:support@mycompany.com
+98. Send message to customer: "Welcome to our service" | send_email | hubspot | subject:Welcome to our service
+99. Email lead about demo scheduling | send_email | hubspot | subject:demo scheduling
+100. Send follow-up email to prospect | send_email | hubspot | subject:follow-up

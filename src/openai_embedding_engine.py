@@ -1,34 +1,52 @@
 """
-Embedding generation and FAISS indexing for intent matching.
+OpenAI-based embedding generation and FAISS indexing for intent matching.
 """
 
 import numpy as np
 import faiss
 import pickle
-from sentence_transformers import SentenceTransformer
+import os
+import time
 from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
 from loguru import logger
+from openai import OpenAI
+from dotenv import load_dotenv
 from .config_parser import ConfigParser, IntentConfig
 
+# Load environment variables
+load_dotenv()
 
-class EmbeddingEngine:
-    """Handles embedding generation and vector similarity search."""
+
+class OpenAIEmbeddingEngine:
+    """Handles OpenAI embedding generation and vector similarity search."""
     
-    def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "text-embedding-3-small"):
         """
-        Initialize the embedding engine with performance optimizations.
+        Initialize the embedding engine with OpenAI embeddings.
         
         Args:
-            model_name: HuggingFace model name for sentence transformers
+            model_name: OpenAI embedding model name
         """
-        logger.info(f"Loading embedding model: {model_name}")
+        self.api_key = os.getenv('OPENAI_API_KEY')
+        if not self.api_key:
+            raise ValueError("OPENAI_API_KEY not found in environment variables")
+            
+        self.client = OpenAI(api_key=self.api_key)
+        self.model_name = os.getenv('OPENAI_EMBEDDING_MODEL', model_name)
         
-        # Load model with optimizations for faster inference
-        self.model = SentenceTransformer(model_name)
-        self.model.eval()  # Set to evaluation mode for faster inference
-        
-        self.embedding_dim = self.model.get_sentence_embedding_dimension()
+        # Set embedding dimension based on model
+        if "text-embedding-3-small" in self.model_name:
+            self.embedding_dim = 1536
+        elif "text-embedding-3-large" in self.model_name:
+            self.embedding_dim = 3072
+        elif "text-embedding-ada-002" in self.model_name:
+            self.embedding_dim = 1536
+        else:
+            self.embedding_dim = 1536  # Default
+            
+        logger.info(f"Initialized OpenAI embedding engine with model: {model_name}")
+        logger.info(f"Embedding dimension: {self.embedding_dim}")
         
         # FAISS index and metadata
         self.index: Optional[faiss.Index] = None
@@ -39,17 +57,47 @@ class EmbeddingEngine:
         self.query_cache = {}
         self.cache_size_limit = 100
         
-        logger.info(f"Embedding dimension: {self.embedding_dim}")
+        # Performance tracking
+        self.last_token_usage = {}
+        self.last_timing = {}
+        self.total_tokens_used = 0
         
-    def generate_embeddings(self, texts: List[str]) -> np.ndarray:
-        """Generate embeddings for a list of texts."""
-        logger.info(f"Generating embeddings for {len(texts)} texts")
-        embeddings = self.model.encode(texts, show_progress_bar=True)
-        return embeddings.astype('float32')
+    def generate_embeddings(self, texts: List[str], batch_size: int = 2048) -> np.ndarray:
+        """Generate embeddings for a list of texts using OpenAI API with optimized batching."""
+        logger.info(f"Generating OpenAI embeddings for {len(texts)} texts")
+        
+        all_embeddings = []
+        
+        # Process in larger batches (OpenAI allows up to 8192 input items)
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            logger.debug(f"Processing batch {i // batch_size + 1}/{(len(texts) + batch_size - 1) // batch_size}")
+            
+            try:
+                response = self.client.embeddings.create(
+                    input=batch,
+                    model=self.model_name
+                )
+                
+                # Extract embeddings from response
+                batch_embeddings = [item.embedding for item in response.data]
+                all_embeddings.extend(batch_embeddings)
+                
+            except Exception as e:
+                logger.error(f"OpenAI API error: {e}")
+                # Reduce batch size and retry on error
+                if batch_size > 100:
+                    logger.info(f"Retrying with smaller batch size: {batch_size // 2}")
+                    return self.generate_embeddings(texts, batch_size // 2)
+                raise
+        
+        embeddings = np.array(all_embeddings, dtype=np.float32)
+        logger.info(f"Generated {embeddings.shape[0]} embeddings with dimension {embeddings.shape[1]}")
+        return embeddings
         
     def build_index(self, config_parser: ConfigParser) -> None:
-        """Build FAISS index from intent configurations."""
-        logger.info("Building FAISS index from intent configurations")
+        """Build FAISS index from intent configurations using OpenAI embeddings."""
+        logger.info("Building FAISS index from intent configurations using OpenAI")
         
         # Store intents for later retrieval
         self.intents = list(config_parser.intents)
@@ -79,11 +127,11 @@ class EmbeddingEngine:
             for intent in self.intents
         ]
         
-        logger.info(f"Built FAISS index with {self.index.ntotal} intents")
+        logger.info(f"Built FAISS index with {self.index.ntotal} intents using OpenAI embeddings")
         
     def search_similar_intents(self, query: str, top_k: int = 5) -> List[Tuple[IntentConfig, float]]:
         """
-        Search for similar intents using semantic similarity.
+        Search for similar intents using OpenAI embeddings and semantic similarity.
         
         Args:
             query: User query text
@@ -94,13 +142,65 @@ class EmbeddingEngine:
         """
         if self.index is None:
             raise ValueError("Index not built. Call build_index() first.")
+        
+        # Check cache first
+        if query in self.query_cache:
+            logger.debug(f"Using cached embedding for query: '{query}'")
+            query_embedding = self.query_cache[query]
+            embedding_time = 0.0  # No API call needed
+            embedding_tokens = 0
+        else:
+            # Track timing for embedding generation
+            start_time = time.time()
             
-        # Generate query embedding
-        query_embedding = self.model.encode([query]).astype('float32')
+            # Generate query embedding using OpenAI
+            try:
+                response = self.client.embeddings.create(
+                    input=[query],
+                    model=self.model_name
+                )
+                
+                query_embedding = np.array([response.data[0].embedding], dtype=np.float32)
+                
+                # Track performance
+                end_time = time.time()
+                embedding_time = end_time - start_time
+                
+                if hasattr(response, 'usage') and response.usage:
+                    embedding_tokens = response.usage.total_tokens
+                    self.total_tokens_used += embedding_tokens
+                else:
+                    embedding_tokens = 0
+                
+                # Cache the embedding
+                if len(self.query_cache) < self.cache_size_limit:
+                    self.query_cache[query] = query_embedding
+                    
+            except Exception as e:
+                logger.error(f"OpenAI embedding error: {e}")
+                raise
+            
         faiss.normalize_L2(query_embedding)
         
         # Search in index
+        search_start = time.time()
         similarities, indices = self.index.search(query_embedding, top_k)
+        search_time = time.time() - search_start
+        
+        # Update timing info
+        self.last_timing = {
+            'embedding_time': embedding_time,
+            'search_time': search_time,
+            'total_time': embedding_time + search_time,
+            'timestamp': time.time()
+        }
+        
+        # Update token usage
+        self.last_token_usage = {
+            'embedding_tokens': embedding_tokens,
+            'operation': 'intent_search',
+            'cached': query in self.query_cache and embedding_time == 0.0
+        }
         
         # Return results with intent configs and scores
         results = []
@@ -109,7 +209,7 @@ class EmbeddingEngine:
                 intent_config = self.intents[idx]
                 results.append((intent_config, float(similarity)))
                 
-        logger.debug(f"Found {len(results)} similar intents for query: '{query}'")
+        logger.debug(f"Found {len(results)} similar intents for query: '{query}' in {search_time:.3f}s")
         return results
         
     def find_best_intent(self, query: str, confidence_threshold: float = 0.8) -> Optional[Tuple[IntentConfig, float]]:
@@ -139,24 +239,26 @@ class EmbeddingEngine:
         if self.index is None:
             raise ValueError("No index to save. Build index first.")
             
-        logger.info(f"Saving index to {index_path}")
+        logger.info(f"Saving OpenAI-based index to {index_path}")
         faiss.write_index(self.index, index_path)
         
         # Save metadata and intents
         metadata = {
             'intent_metadata': self.intent_metadata,
             'intents': self.intents,
-            'embedding_dim': self.embedding_dim
+            'embedding_dim': self.embedding_dim,
+            'model_name': self.model_name,
+            'engine_type': 'openai'
         }
         
         with open(metadata_path, 'wb') as f:
             pickle.dump(metadata, f)
             
-        logger.info(f"Saved metadata to {metadata_path}")
+        logger.info(f"Saved OpenAI metadata to {metadata_path}")
         
     def load_index(self, index_path: str, metadata_path: str) -> None:
         """Load FAISS index and metadata from disk."""
-        logger.info(f"Loading index from {index_path}")
+        logger.info(f"Loading OpenAI-based index from {index_path}")
         self.index = faiss.read_index(index_path)
         
         with open(metadata_path, 'rb') as f:
@@ -166,7 +268,11 @@ class EmbeddingEngine:
         self.intents = metadata['intents']
         self.embedding_dim = metadata['embedding_dim']
         
-        logger.info(f"Loaded index with {self.index.ntotal} intents")
+        # Ensure we're using the same model as when saved
+        if 'model_name' in metadata:
+            self.model_name = metadata['model_name']
+            
+        logger.info(f"Loaded OpenAI-based index with {self.index.ntotal} intents")
         
     def get_index_stats(self) -> Dict[str, Any]:
         """Get statistics about the current index."""
@@ -182,7 +288,8 @@ class EmbeddingEngine:
             'total_intents': len(self.intents),
             'embedding_dimension': self.embedding_dim,
             'platform_breakdown': platform_counts,
-            'model_name': self.model._modules['0'].auto_model.name_or_path
+            'model_name': self.model_name,
+            'engine_type': 'openai'
         }
 
 

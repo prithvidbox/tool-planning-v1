@@ -93,32 +93,63 @@ class DependencyPlanner:
     
     @staticmethod
     def validate_dependencies(dependencies: List[ToolDependency], 
-                             available_vars: Set[str]) -> Tuple[bool, List[str]]:
+                             available_vars: Set[str], 
+                             intent_config = None) -> Tuple[bool, List[str], List[str]]:
         """Validate that all dependencies can be satisfied."""
         current_vars = available_vars.copy()
-        missing_vars = []
+        missing_required = []
+        missing_optional = []
+        
+        # Get required vs optional variables from intent config
+        required_vars = set()
+        optional_vars = set()
+        
+        if intent_config and intent_config.variables:
+            for var_def in intent_config.variables:
+                var_name = var_def.get('name')
+                is_required = var_def.get('required', False)
+                if is_required:
+                    required_vars.add(var_name)
+                else:
+                    optional_vars.add(var_name)
         
         for dep in dependencies:
-            # Check which variables this tool actually needs (excluding those with default values)
-            truly_required = set()
+            # Check which variables this tool actually needs
+            tool_required = set()
+            tool_optional = set()
+            
             for param, value in dep.params.items():
                 if isinstance(value, str) and value.startswith('$'):
                     if '||' in value:
-                        # Has default value, not truly required
+                        # Has default value syntax, skip
                         continue
                     else:
                         var_name = value[1:]
-                        truly_required.add(var_name)
+                        # Classify based on intent config
+                        if var_name in required_vars:
+                            tool_required.add(var_name)
+                        elif var_name in optional_vars:
+                            tool_optional.add(var_name)
+                        else:
+                            # Default to required if not specified in config
+                            tool_required.add(var_name)
             
-            unsatisfied = truly_required - current_vars
-            if unsatisfied:
-                missing_vars.extend(unsatisfied)
-                logger.warning(f"Tool {dep.tool_name} missing variables: {unsatisfied}")
+            # Check missing variables
+            missing_req = tool_required - current_vars
+            missing_opt = tool_optional - current_vars
+            
+            if missing_req:
+                missing_required.extend(missing_req)
+                logger.warning(f"Tool {dep.tool_name} missing required variables: {missing_req}")
+            
+            if missing_opt:
+                missing_optional.extend(missing_opt)
+                logger.info(f"Tool {dep.tool_name} missing optional variables: {missing_opt}")
             
             # Tool can execute, add its provided variables
             current_vars.update(dep.provided_vars)
                 
-        return len(missing_vars) == 0, list(set(missing_vars))
+        return len(missing_required) == 0, list(set(missing_required)), list(set(missing_optional))
     
     @staticmethod
     def reorder_tool_plan(dependencies: List[ToolDependency],
@@ -197,13 +228,16 @@ class DependencyPlanner:
             logger.info(f"Available variables from query: {available_vars}")
             
             # Validate that all dependencies can be satisfied
-            is_valid, missing_vars = cls.validate_dependencies(dependencies, available_vars)
+            is_valid, missing_required, missing_optional = cls.validate_dependencies(
+                dependencies, available_vars, intent_config
+            )
             
             if not is_valid:
                 return {
                     'success': False,
-                    'error': f'Cannot satisfy dependencies. Missing required variables: {", ".join(missing_vars)}',
-                    'missing_variables': missing_vars,
+                    'error': f'Cannot satisfy dependencies. Missing required variables: {", ".join(missing_required)}',
+                    'missing_variables': missing_required,
+                    'missing_optional_variables': missing_optional,
                     'available_variables': list(available_vars)
                 }
             

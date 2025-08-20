@@ -66,7 +66,10 @@ def build_index_command(args):
     table.add_row("Platforms", ", ".join(stats['config_stats']['platforms']))
     table.add_row("Embedding Dimension", str(stats['embedding_stats']['embedding_dimension']))
     table.add_row("Confidence Threshold", str(args.threshold))
-    table.add_row("Model", args.model)
+    # Use actual model name from the embedding engine instead of CLI argument
+    actual_model = stats['embedding_stats'].get('model_name', args.model)
+    engine_type = stats['embedding_stats'].get('engine_type', 'sentence-transformers')
+    table.add_row("Model", f"{actual_model} ({engine_type})")
     
     console.print(table)
 
@@ -183,6 +186,37 @@ def test_query_command(args):
                     'dependency_analysis': final_result['dependency_analysis'],
                     'description': result.get('description', '')
                 }
+            elif 'missing_optional_variables' in final_result and final_result['missing_optional_variables']:
+                # Handle optional variables - ask user if they want to provide them
+                console.print(f"[yellow]Optional variables available:[/yellow] {', '.join(final_result['missing_optional_variables'])}")
+                
+                if Confirm.ask("Would you like to provide optional details for better results?", default=False):
+                    # Collect optional variables
+                    optional_vars = collector.collect_missing_variables(
+                        missing_vars=final_result['missing_optional_variables'],
+                        intent_description=matched_intent.description,
+                        intent_examples=matched_intent.examples,
+                        tool_plan=matched_intent.tool_plan
+                    )
+                    complete_vars.update(optional_vars)
+                
+                # Try again with optional variables
+                final_result = DependencyPlanner.plan_tool_execution(matched_intent, complete_vars)
+                
+                if final_result['success']:
+                    result = {
+                        'success': True,
+                        'intent': result['intent'],
+                        'platform': result['platform'], 
+                        'confidence': result['confidence'],
+                        'variables': complete_vars,
+                        'tool_plan': final_result['tool_plan'],
+                        'execution_order': final_result['execution_order'],
+                        'dependency_analysis': final_result['dependency_analysis'],
+                        'description': result.get('description', '')
+                    }
+                else:
+                    result = final_result
             else:
                 result = final_result
     
@@ -200,6 +234,25 @@ def test_query_command(args):
                 f"• Tools with Dependencies: {dep['tools_with_dependencies']}\n"
             )
         
+        # Show performance metrics if available
+        performance_info = ""
+        if hasattr(matcher.embedding_engine, 'last_timing') and hasattr(matcher.variable_extractor, 'last_timing'):
+            embed_timing = matcher.embedding_engine.last_timing
+            var_timing = matcher.variable_extractor.last_timing
+            embed_tokens = matcher.embedding_engine.last_token_usage
+            var_tokens = matcher.variable_extractor.last_token_usage
+            
+            total_time = embed_timing.get('total_time', 0) + var_timing.get('variable_extraction_time', 0)
+            total_tokens = embed_tokens.get('embedding_tokens', 0) + var_tokens.get('total_tokens', 0)
+            
+            performance_info = (
+                f"\n[bold]Performance Metrics:[/bold]\n"
+                f"• Intent Matching: {embed_timing.get('total_time', 0):.3f}s ({embed_tokens.get('embedding_tokens', 0)} tokens)\n"
+                f"• Variable Extraction: {var_timing.get('variable_extraction_time', 0):.3f}s ({var_tokens.get('total_tokens', 0)} tokens)\n"
+                f"• Total: {total_time:.3f}s ({total_tokens} tokens)\n"
+                f"• Cache Hit: {'Yes' if embed_tokens.get('cached', False) else 'No'}\n"
+            )
+        
         panel = Panel(
             f"[green]✅ Intent Executed[/green]\n\n"
             f"[bold]Intent:[/bold] {result['intent']}\n"
@@ -207,7 +260,8 @@ def test_query_command(args):
             f"[bold]Confidence:[/bold] {result['confidence']:.3f}\n"
             f"[bold]Description:[/bold] {result['description']}\n\n"
             f"[bold]Variables Extracted:[/bold]\n{json.dumps(result.get('variables', {}), indent=2)}"
-            f"{dependency_info}\n"
+            f"{dependency_info}"
+            f"{performance_info}\n"
             f"[bold]Tool Plan:[/bold]\n{json.dumps(result.get('tool_plan', []), indent=2)}",
             title="Execution Details"
         )
